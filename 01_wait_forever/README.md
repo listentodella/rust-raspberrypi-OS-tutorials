@@ -1,41 +1,35 @@
-# Tutorial 01 - Wait Forever
+# 教程 01 - 一直等待（死循环）
 
 ## tl;dr
 
-- The project skeleton is set up.
-- A small piece of assembly code runs that just halts all CPU cores executing the kernel code.
+项目框架已经构建完成；目前代码做的仅仅是挂起CPU核心执行内核代码。
 
-## Building
-
-- `Makefile` targets:
-    - `doc`: Generate documentation.
-    - `qemu`: Run the `kernel` in QEMU
+-  `Makefile` 目标项：
+    - `doc`: 生成文档。
+    - `qemu`: 在 QEMU 中运行 `kernel`。
     - `clippy`
     - `clean`
-    - `readelf`: Inspect the `ELF` output.
-    - `objdump`: Inspect the assembly.
-    - `nm`: Inspect the symbols.
-
-## Code to look at
-
-- `BSP`-specific `kernel.ld` linker script.
-    - Load address at `0x8_0000`
-    - Only `.text` section.
-- `main.rs`: Important [inner attributes]:
+    - `readelf`: 检查 `ELF` 输出。
+    - `objdump`: 检查汇编。
+    - `nm`: 检查符号。
+- 代码按照 `kernel`， `arch` 和 `BSP` （板级支持包）的形式组织。
+    - 条件编译会根据用户提供的参数编译各自的  `arch` 和  `BSP` 的内容。
+- 自定义 `kernel.ld` 链接脚本.
+    - 载入地址为 `0x80_000`
+    - 目前仅有 `.text` 小节（section）。
+- `main.rs`: 重要的 [inner attributes]:
     - `#![no_std]`, `#![no_main]`
-- `boot.s`: Assembly `_start()` function that executes `wfe` (Wait For Event), halting all cores
-  that are executing `_start()`.
-- We (have to) define a `#[panic_handler]` function to make the compiler happy.
-    - Make it `unimplemented!()` because it will be stripped out since it is not used.
+- 汇编函数 `_start()` 会执行  `wfe` (Wait For Event)， 并挂起所有正在执行  `_start()` 的核心。
+- 我们（必须）定义一个 `#[panic_handler]` 函数。
+    - 用于等待cpu事件的发生。
 
 [inner attributes]: https://doc.rust-lang.org/reference/attributes.html
 
-### Test it
+### 测试一下！
 
-In the project folder, invoke QEMU and observe the CPU core spinning on `wfe`:
-
+在项目文件夹下调用 QEMU 并观察在 `wfe` 中CPU核心的运转情况：
 ```console
-$ make qemu
+» make qemu
 [...]
 IN:
 0x00080000:  d503205f  wfe

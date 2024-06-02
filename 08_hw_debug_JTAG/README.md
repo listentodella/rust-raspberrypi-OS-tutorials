@@ -1,57 +1,52 @@
-# Tutorial 08 - Hardware Debugging using JTAG
+# 教程 08 - 使用JTAG进行硬件调试
 
 ## tl;dr
 
-In the exact order as listed:
+按照以下顺序进行操作：
 
-1. `make jtagboot` and keep terminal open.
-2. Connect USB serial device.
-3. Connect `JTAG` debugger USB device.
-4. In new terminal, `make openocd` and keep terminal open.
-5. In new terminal, `make gdb` or make `make gdb-opt0`.
+1. 运行`make jtagboot`并保持终端打开。
+2. 连接USB串行设备。
+3. 连接`JTAG`调试器的USB设备。
+4. 在新的终端中，运行`make openocd`并保持终端打开。
+5. 在新的终端中，运行`make gdb`或者运行`make gdb-opt0`。
 
 ![Demo](../doc/09_demo.gif)
 
-## Table of Contents
+## 目录
 
-- [Introduction](#introduction)
-- [Outline](#outline)
-- [Software Setup](#software-setup)
-- [Hardware Setup](#hardware-setup)
-  * [Wiring](#wiring)
-- [Getting ready to connect](#getting-ready-to-connect)
+- [简介](#简介)
+- [大纲](#大纲)
+- [软件设置](#软件设置)
+- [硬件设置](#硬件设置)
+  * [线路](#线路)
+- [准备连接](#准备连接)
 - [OpenOCD](#openocd)
 - [GDB](#gdb)
-  * [Remarks](#remarks)
-    + [Optimization](#optimization)
-    + [GDB control](#gdb-control)
-- [Notes on USB connection constraints](#notes-on-usb-connection-constraints)
-- [Additional resources](#additional-resources)
-- [Acknowledgments](#acknowledgments)
-- [Diff to previous](#diff-to-previous)
+  * [备注](#备注)
+    + [优化](#优化)
+    + [GDB控制](#GDB控制)
+- [关于USB连接限制的注意事项](#关于USB连接限制的注意事项)
+- [额外资料](#额外资料)
+- [致谢](#致谢)
+- [相比之前的变化（diff）](#相比之前的变化（diff）)
 
-## Introduction
+## 简介
 
-In the upcoming tutorials, we are going to touch sensitive areas of the RPi's SoC that can make our
-debugging life very hard. For example, changing the processor's `Privilege Level` or introducing
-`Virtual Memory`.
+在即将到来的教程中，我们将涉及RPi的SoC（系统芯片）的敏感区域，这可能会让我们的调试工作变得非常困难。
+例如，改变处理器的`Privilege Level`或引入`Virtual Memory`。
 
-A hardware based debugger can sometimes be the last resort when searching for a tricky bug.
-Especially for debugging intricate, architecture-specific HW issues, it will be handy, because in
-this area `QEMU` sometimes can not help, since it abstracts certain features of the HW and doesn't
-simulate down to the very last bit.
+硬件调试器有时可以成为寻找棘手错误的最后手段。特别是对于调试复杂的、与体系结构相关的硬件问题，它将非常有用，
+因为在这个领域，`QEMU`有时无法提供帮助，因为它对硬件的某些特性进行了抽象，并没有模拟到最后一位。
 
-So lets introduce `JTAG` debugging. Once set up, it will allow us to single-step through our kernel
-on the real HW. How cool is that?!
+那么，让我们介绍一下`JTAG`调试。一旦设置好，它将允许我们在真实的硬件上逐步执行我们的内核。这是多么酷啊！
 
-## Outline
+## 大纲
 
-From kernel perspective, this tutorial is the same as the previous one. We are just wrapping
-infrastructure for JTAG debugging around it.
+从内核的角度来看，这个教程与之前的教程相同。我们只是在其周围添加了用于JTAG调试的基础设施。
 
-## Software Setup
+## 软件设置
 
-We need to add another line to the `config.txt` file from the SD Card:
+我们需要在SD卡的`config.txt`文件中添加另一行：
 
 ```toml
 arm_64bit=1
@@ -59,19 +54,19 @@ init_uart_clock=48000000
 enable_jtag_gpio=1
 ```
 
-## Hardware Setup
+## 硬件设置
 
-Unlike microcontroller boards like the `STM32F3DISCOVERY`, which is used in our WG's [Embedded Rust
-Book], the Raspberry Pi does not have an embedded debugger on its board. Hence, you need to buy one.
+与我们WG的[Embedded Rust Book]书籍中使用的`STM32F3DISCOVERY`等微控制器板不同，RPi没有在其板上内置调试器。
+因此，您需要购买一个。
 
-For this tutorial, we will use the [ARM-USB-TINY-H] from OLIMEX. It has a standard [ARM JTAG 20
-connector]. Unfortunately, the RPi does not, so we have to connect it via jumper wires.
+在本教程中，我们将使用OLIMEX的[ARM-USB-TINY-H]。它具有标准的[ARM JTAG 20 connector]。
+不幸的是，RPi没有这个连接器，所以我们必须通过跳线连接它。
 
 [Embedded Rust Book]: https://rust-embedded.github.io/book/start/hardware.html
 [ARM-USB-TINY-H]: https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H
 [ARM JTAG 20 connector]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0499dj/BEHEIHCE.html
 
-### Wiring
+### 线路
 
 <table>
     <thead>
@@ -138,18 +133,15 @@ connector]. Unfortunately, the RPi does not, so we have to connect it via jumper
 
 <p align="center"><img src="../doc/09_image_jtag_connected.jpg" width="50%"></p>
 
-## Getting ready to connect
+## 准备连接
 
-Upon booting, thanks to the changes we made to `config.txt`, the RPi's firmware will configure the
-respective GPIO pins for `JTAG` functionality.
+在启动时，由于我们对`config.txt`进行的更改，RPi的固件将配置相应的GPIO引脚以实现`JTAG`功能。
 
-What is left to do now is to pause the execution of the RPi and then connect
-over `JTAG`. Therefore, we add a new `Makefile` target, `make jtagboot`, which
-uses the `chainboot` approach to load a tiny helper binary onto the RPi that
-just parks the executing core into a waiting state.
+现在剩下的要做的就是暂停RPi的执行，然后通过`JTAG`进行连接。因此，我们添加了一个新的`Makefile` target，
+`make jtagboot`，它使用`chainboot`方法将一个小型辅助二进制文件加载到RPi上，
+该文件只是将执行核心置于等待状态。
 
-The helper binary is maintained separately in this repository's [X1_JTAG_boot] folder, and is a
-modified version of the kernel we used in our tutorials so far.
+文件夹中单独[X1_JTAG_boot]文件夹中单独维护，并且是我们迄今为止在教程中使用的内核的修改版本。
 
 [X1_JTAG_boot]: ../X1_JTAG_boot
 
@@ -174,23 +166,21 @@ Minipush 1.0
 [    0.394532] Parking CPU core. Please connect over JTAG now.
 ```
 
-It is important to keep the USB serial connected and the terminal with the `jtagboot` open and
-running. When we load the actual kernel later, `UART` output will appear here.
+保持USB串口连接和打开运行`jtagboot`的终端非常重要。当我们稍后加载实际的内核时，`UART`输出将显示在这里。
 
 ## OpenOCD
 
-Next, we need to launch the [Open On-Chip Debugger], aka `OpenOCD` to actually connect the `JTAG`.
+接下来，我们需要启动开放式片上调试器 [Open On-Chip Debugger]，也称为`OpenOCD`，以实际连接`JTAG`。
 
 [Open On-Chip Debugger]: http://openocd.org
 
-As always, our tutorials try to be as painless as possible regarding dev-tools, which is why we have
-packaged everything into the [dedicated Docker container] that is already used for chainbooting and
-`QEMU`.
+一如既往，我们的教程力求使开发工具的使用尽可能简单，
+这就是为什么我们将所有内容打包到了[dedicated Docker container]中，该容器已经用于链式引导和`QEMU`。
 
 [dedicated Docker container]: ../docker/rustembedded-osdev-utils
 
-Connect the Olimex USB JTAG debugger, open a new terminal and in the same folder, type `make
-openocd` (in that order!). You will see some initial output:
+连接Olimex USB JTAG调试器，在同一个文件夹中打开一个新的终端窗口，然后按顺序输入
+`make openocd`命令。你将会看到一些初始输出：
 
 ```console
 $ make openocd
@@ -211,24 +201,22 @@ Info : Listening on port 3335 for gdb connections
 Info : Listening on port 3336 for gdb connections
 ```
 
-`OpenOCD` has detected the four cores of the RPi, and opened four network ports to which `gdb` can
-now connect to debug the respective core.
+`OpenOCD`已检测到RPi的四个核心，并打开了四个网络端口，`gdb`现在可以连接到这些端口来调试各自的核心。
 
 ## GDB
 
-Finally, we need an `AArch64`-capable version of `gdb`. You guessed right, it's already packaged in
-the osdev container. It can be launched via `make gdb`.
+最后，我们需要一个支持`AArch64`的`gdb`版本。你猜对了，它已经打包在osdev容器中。
+可以通过`make gdb`命令启动它。
 
-This Makefile target actually does a little more. It builds a special version of our kernel with
-debug information included. This enables `gdb` to show the `Rust` source code line we are currently
-debugging. It also launches `gdb` such that it already loads this debug build (`kernel_for_jtag`).
+实际上，这个Makefile target做了更多的事情。它构建了一个包含调试信息的特殊版本的内核。
+这使得`gdb`能够显示我们当前正在调试的`Rust`源代码行。
+它还启动了`gdb`，以便它已经加载了这个调试构建（`kernel_for_jtag`）。
 
-We can now use the `gdb` commandline to
-  1. Set breakpoints in our kernel
-  2. Load the kernel via JTAG into memory (remember that currently, the RPi is still executing the
-     minimal JTAG boot binary).
-  3. Manipulate the program counter of the RPi to start execution at our kernel's entry point.
-  4. Single-step through its execution.
+现在我们可以使用`gdb`命令行来进行以下操作：
+  1. 在我们的内核中设置断点。
+  2. 通过JTAG将内核加载到内存中（请记住，当前RPi仍在执行最小的JTAG引导二进制文件）。
+  3. 操纵RPi的程序计数器，使其从我们内核的入口点开始执行。
+  4. 逐步执行内核的执行过程。
 
 ```console
 $ make gdb
@@ -251,176 +239,50 @@ Breakpoint 1 at 0x8025c: file src/main.rs, line 158.
 >>> ...
 ```
 
-### Remarks
+### 备注
 
-#### Optimization
+#### 优化
 
-When debugging an OS binary, you have to make a trade-off between the granularity at which you can
-step through your Rust source-code and the optimization level of the generated binary. The `make`
-and `make gdb` targets produce a `--release` binary, which includes an optimization level of three
-(`-opt-level=3`). However, in this case, the compiler will inline very aggressively and pack
-together reads and writes where possible. As a result, it will not always be possible to hit
-breakpoints exactly where you want to regarding the line of source code file.
+在调试操作系统二进制文件时，您需要在可以逐步执行源代码粒度和生成的二进制文件的优化级别之间进行权衡。
+`make`和`make gdb`targets生成一个`--release`二进制文件，其中包含优化级别为3（`-opt-level=3`）。
+然而，在这种情况下，编译器会非常积极地进行内联，并尽可能地将读取和写入操作打包在一起。
+因此，不总是能够在源代码文件的特定行上准确命中断点。
 
-For this reason, the Makefile also provides the `make gdb-opt0` target, which uses `-opt-level=0`.
-Hence, it will allow you to have finer debugging granularity. However, please keep in mind that when
-debugging code that closely deals with HW, a compiler optimization that squashes reads or writes to
-volatile registers can make all the difference in execution. FYI, the demo gif above has been
-recorded with `gdb-opt0`.
+因此，Makefile还提供了`make gdb-opt0` target，它使用了`-opt-level=0`。
+因此，它将允许您拥有更精细的调试粒度。然而，请记住，当调试与硬件密切相关的代码时，
+编译器对易失性寄存器的读取或写入进行压缩的优化可能会对执行产生重大影响。
+请注意，上面的演示GIF是使用`gdb-opt0`录制的。
 
-#### GDB control
+#### GDB控制
 
-At some point, you may reach delay loops or code that waits on user input from the serial. Here,
-single stepping might not be feasible or work anymore. You can jump over these roadblocks by setting
-other breakpoints beyond these areas, and reach them using the `cont` command.
+在某些情况下，您可能会遇到延迟循环或等待串行输入的代码。在这种情况下，
+逐步执行可能不可行或无法正常工作。您可以通过在这些区域之外设置其他断点，从而跳过这些障碍。
+并使用`cont`命令到达它们。
 
-Pressing `ctrl+c` in `gdb` will stop execution of the RPi again in case you continued it without
-further breakpoints.
+在`gdb`中按下`ctrl+c`将再次停止RPi的执行，以防止您在没有进一步断点的情况下继续执行。
 
-## Notes on USB connection constraints
+## 关于USB连接限制的注意事项
 
-If you followed the tutorial from top to bottom, everything should be fine regarding USB
-connections.
+如果您按照教程从头到尾进行操作，关于USB连接的一切应该都没问题。
 
-Still, please note that in its current form, our `Makefile` makes implicit assumptions about the
-naming of the connected USB devices. It expects `/dev/ttyUSB0` to be the `UART` device.
+但是，请注意，根据当前的形式，我们的`Makefile`对连接的USB设备的命名做出了隐含的假设。
+它期望`/dev/ttyUSB0`是`UART`设备。
 
-Hence, please ensure the following order of connecting the devices to your box:
-  1. Connect the USB serial.
-  2. Afterwards, the Olimex debugger.
+因此，请确保按照以下顺序将设备连接到您的计算机：
+  1. 首先连接USB串行设备。
+  2. 然后连接Olimex调试器。
 
-This way, the host OS enumerates the devices accordingly. This has to be done only once. It is fine
-to disconnect and connect the serial multiple times, e.g. for kicking off different `make jtagboot`
-runs, while keeping the debugger connected.
+这样，主机操作系统会相应地枚举这些设备。这只需要做一次即可。
+可以多次断开和连接串行设备，例如在保持调试器连接的情况下启动不同的`make jtagboot`运行。
 
-## Additional resources
+## 额外资料
 
 - https://metebalci.com/blog/bare-metal-raspberry-pi-3b-jtag
 - https://www.suse.com/c/debugging-raspberry-pi-3-with-jtag
 
-## Acknowledgments
+## 致谢
 
-Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for this tutorial.
+感谢[@naotaco](https://github.com/naotaco)为本教程奠定了基础。
 
-## Diff to previous
-```diff
-
-diff -uNr 07_timestamps/Cargo.toml 08_hw_debug_JTAG/Cargo.toml
---- 07_timestamps/Cargo.toml
-+++ 08_hw_debug_JTAG/Cargo.toml
-@@ -1,6 +1,6 @@
- [package]
- name = "mingo"
--version = "0.7.0"
-+version = "0.8.0"
- authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2021"
-
-
-diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
---- 07_timestamps/Makefile
-+++ 08_hw_debug_JTAG/Makefile
-@@ -32,6 +32,8 @@
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
-     NM_BINARY         = aarch64-none-elf-nm
-     READELF_BINARY    = aarch64-none-elf-readelf
-+    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-+    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
-     LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
- else ifeq ($(BSP),rpi4)
-@@ -43,6 +45,8 @@
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
-     NM_BINARY         = aarch64-none-elf-nm
-     READELF_BINARY    = aarch64-none-elf-readelf
-+    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-+    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
-     LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
- endif
-@@ -99,18 +103,25 @@
- DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
- DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
- DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
-+DOCKER_ARG_DIR_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/work/X1_JTAG_boot
- DOCKER_ARG_DEV        = --privileged -v /dev:/dev
-+DOCKER_ARG_NET        = --network host
-
- # DOCKER_IMAGE defined in include file (see top of this file).
- DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
- DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
- DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
-+DOCKER_GDB   = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
-
- # Dockerize commands, which require USB device passthrough, only on Linux.
- ifeq ($(shell uname -s),Linux)
-     DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
-
-     DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
-+    DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-+    DOCKER_OPENOCD   = $(DOCKER_CMD_DEV) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
-+else
-+    DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
- endif
-
-
-@@ -215,6 +226,35 @@
-
-
-
-+##--------------------------------------------------------------------------------------------------
-+## Debugging targets
-+##--------------------------------------------------------------------------------------------------
-+.PHONY: jtagboot openocd gdb gdb-opt0
-+
-+##------------------------------------------------------------------------------
-+## Push the JTAG boot image to the real HW target
-+##------------------------------------------------------------------------------
-+jtagboot:
-+	@$(DOCKER_JTAGBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(JTAG_BOOT_IMAGE)
-+
-+##------------------------------------------------------------------------------
-+## Start OpenOCD session
-+##------------------------------------------------------------------------------
-+openocd:
-+	$(call color_header, "Launching OpenOCD")
-+	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
-+
-+##------------------------------------------------------------------------------
-+## Start GDB session
-+##------------------------------------------------------------------------------
-+gdb: RUSTC_MISC_ARGS += -C debuginfo=2
-+gdb-opt0: RUSTC_MISC_ARGS += -C debuginfo=2 -C opt-level=0
-+gdb gdb-opt0: $(KERNEL_ELF)
-+	$(call color_header, "Launching GDB")
-+	@$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
-+
-+
-+
- ##--------------------------------------------------------------------------------------------------
- ## Testing targets
- ##--------------------------------------------------------------------------------------------------
-
-diff -uNr 07_timestamps/src/bsp/raspberrypi/driver.rs 08_hw_debug_JTAG/src/bsp/raspberrypi/driver.rs
---- 07_timestamps/src/bsp/raspberrypi/driver.rs
-+++ 08_hw_debug_JTAG/src/bsp/raspberrypi/driver.rs
-@@ -57,17 +57,6 @@
- /// # Safety
- ///
- /// See child function calls.
--///
--/// # Note
--///
--/// Using atomics here relieves us from needing to use `unsafe` for the static variable.
--///
--/// On `AArch64`, which is the only implemented architecture at the time of writing this,
--/// [`AtomicBool::load`] and [`AtomicBool::store`] are lowered to ordinary load and store
--/// instructions. They are therefore safe to use even with MMU + caching deactivated.
--///
--/// [`AtomicBool::load`]: core::sync::atomic::AtomicBool::load
--/// [`AtomicBool::store`]: core::sync::atomic::AtomicBool::store
- pub unsafe fn init() -> Result<(), &'static str> {
-     static INIT_DONE: AtomicBool = AtomicBool::new(false);
-     if INIT_DONE.load(Ordering::Relaxed) {
-
-```
+## 相比之前的变化（diff）
+请检查[英文版本](README.md#diff-to-previous)，这是最新的。

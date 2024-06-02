@@ -1,70 +1,33 @@
-# Before we start
+# 在我们开始之前
 
-The following text is a 1:1 copy of the documentation that can be found at the top of the kernel's
-main source code file in each tutorial. It describes the general structure of the source code, and
-tries to convey the philosophy behind the respective approach. Please read it to make yourself
-familiar with what you will encounter during the tutorials. It will help you to navigate the code
-better and understand the differences and additions between the separate tutorials.
+下面的文本内容是1：1 复制的文档。在每个教程的内核主要源代码文档的头部。它描述了源代码的主要结构并且试着去传达各个方法背后的理念。请阅读文章以便你能熟悉你在教程中将会遇到的东西。这将帮助你更好的浏览代码和理解不同章节的区别和增量内容。
 
-Please also note that the following text will reference source code files (e.g. `**/memory.rs`) or
-functions that won't exist yet in the first bunch of the tutorials. They will be added gradually as
-the tutorials advance.
+另请注意，以下文字将引用源代码文件（例如`**/memory.rs`）或在本教程的第一批教程中尚不存在的功能。 它们将被逐渐添加到本教程。
 
-Have fun!
+玩的开心！
 
-# Code organization and architecture
+## 代码组织和结构
 
-The code is divided into different *modules*, each representing a typical **subsystem** of the
-`kernel`. Top-level module files of subsystems reside directly in the `src` folder. For example,
-`src/memory.rs` contains code that is concerned with all things memory management.
+代码被划分成不同的*模块*，每个模块代表一个内核典型的子系统。子系统的顶层模块文件直接位于`src`文件夹中。例如，`src/memory.rs`这个包含了所有与内存管理有关的代码。
 
-## Visibility of processor architecture code
+## 处理器架构代码的可见性
 
-Some of the `kernel`'s subsystems depend on low-level code that is specific to the target processor
-architecture. For each supported processor architecture, there exists a subfolder in `src/_arch`,
-for example, `src/_arch/aarch64`.
+有的内核的子系统是基于特定目标架构的处理器的低级代码。对于每种支持的处理器架构，都有一个子文件夹在`src/_arch`中。例如，`src/_arch/aarch64`
 
-The architecture folders mirror the subsystem modules laid out in `src`. For example, architectural
-code that belongs to the `kernel`'s MMU subsystem (`src/memory/mmu.rs`) would go into
-`src/_arch/aarch64/memory/mmu.rs`. The latter file is loaded as a module in `src/memory/mmu.rs`
-using the `path attribute`. Usually, the chosen module name is the generic module's name prefixed
-with `arch_`.
+子模块系统在每个处理器架构的`src`文件夹中。例如，属于内核内存子系统(`src/memory.rs`)的代码将会被放在`src/_arch/aarch64/memory.rs`.后一个文件将被直接包含和重新导出到`src/memory.rs`中，以便架构代码部分是明显的遵循代码模块化。这意味着在`src/_arch/aarch64/memory.rs`中定义的公共函数foo（）。仅可通过`crate :: memory :: foo（）`访问。
 
-For example, this is the top of `src/memory/mmu.rs`:
+`_arch`中的`_`表示此文件夹不属于标准模块层次结构。而是使用`＃[path =“ _ arch/xxx/yyy.rs”]`属性将其内容有条件地引入各自的文件中。
 
-```
-#[cfg(target_arch = "aarch64")]
-#[path = "../_arch/aarch64/memory/mmu.rs"]
-mod arch_mmu;
-```
+## BSP 代码
+`BSP` 表示 Board Support Package。`BSP`代码在`src/bsp.rs`中，而且包含目标主板特殊的定义和功能。这些是诸如主板的内存映射或相应主板上的设备驱动程序实例之类的东西。
 
-Often times, items from the `arch_ module` will be publicly reexported by the parent module. This
-way, each architecture specific module can provide its implementation of an item, while the caller
-must not be concerned which architecture has been conditionally compiled.
+就像处理器架构代码一样，`BSP`代码模块架构也是试着镜像`kernel`的子系统模块，但是这次它没有明显地包含和重新导出。这意味着必须从bsp名称空间开始调用提供的所有内容，例如，`bsp::driver::driver_manager()`。
 
-## BSP code
+## 内核接口
 
-`BSP` stands for Board Support Package. `BSP` code is organized under `src/bsp.rs` and contains
-target board specific definitions and functions. These are things such as the board's memory map or
-instances of drivers for devices that are featured on the respective board.
+`arch`和`bsp`都包含根据实际目标和主板不同而编译的代码。例如，`interrupt controller`对于硬件`Raspberry Pi 3`和`Raspberry Pi 4`是不同的，但是我们想让`kernel`剩下的代码可以轻松地适配它们。
 
-Just like processor architecture code, the `BSP` code's module structure tries to mirror the
-`kernel`'s subsystem modules, but there is no reexporting this time. That means whatever is provided
-must be called starting from the `bsp` namespace, e.g. `bsp::driver::driver_manager()`.
-
-## Kernel interfaces
-
-Both `arch` and `bsp` contain code that is conditionally compiled depending on the actual target and
-board for which the kernel is compiled. For example, the `interrupt controller` hardware of the
-`Raspberry Pi 3` and the `Raspberry Pi 4` is different, but we want the rest of the `kernel` code to
-play nicely with any of the two without much hassle.
-
-In order to provide a clean abstraction between `arch`, `bsp` and `generic kernel code`, `interface`
-traits are provided *whenever possible* and *where it makes sense*. They are defined in the
-respective subsystem module and help to enforce the idiom of *program to an interface, not an
-implementation*. For example, there will be a common IRQ handling interface which the two different
-interrupt controller `drivers` of both Raspberrys will implement, and only export the interface to
-the rest of the `kernel`.
+为了在`arch`，`bsp`和`generic kernel code`之间提供一个清晰的抽象，`interface`特征在*在可能的情况下*和*在可能的地方*被提供。它们在各自的子系统模块中定义，并有助于将程序的调用方法体现到接口，而不是具体实现上。例如，有一个通用IRQ处理接口，由两个树莓派不同的中断控制器驱动将实现的，并且仅将接口导出到`kernel`剩下的代码中。
 
 ```
         +-------------------+
@@ -80,32 +43,20 @@ the rest of the `kernel`.
 +-------------+       +-------------+
 ```
 
-# Summary
-
-For a logical `kernel` subsystem, corresponding code can be distributed over several physical
-locations. Here is an example for the **memory** subsystem:
-
+# 总结
+对于一个逻辑`kernel`子系统，相应的代码可以分布在几个物理位置。这里有个内存子系统的例子：
 - `src/memory.rs` and `src/memory/**/*`
-  - Common code that is agnostic of target processor architecture and `BSP` characteristics.
-    - Example: A function to zero a chunk of memory.
-  - Interfaces for the memory subsystem that are implemented by `arch` or `BSP` code.
-    - Example: An `MMU` interface that defines `MMU` function prototypes.
-- `src/bsp/__board_name__/memory.rs` and `src/bsp/__board_name__/memory/**/*`
-  - `BSP` specific code.
-  - Example: The board's memory map (physical addresses of DRAM and MMIO devices).
-- `src/_arch/__arch_name__/memory.rs` and `src/_arch/__arch_name__/memory/**/*`
-  - Processor architecture specific code.
-  - Example: Implementation of the `MMU` interface for the `__arch_name__` processor
-    architecture.
-
-From a namespace perspective, **memory** subsystem code lives in:
-
-- `crate::memory::*`
-- `crate::bsp::memory::*`
-
-# Boot flow
-
-1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
-    - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
-
-
+  - 与目标处理器体系结构和“BSP”特性无关的通用代码。
+    - 例如： 将大块内存归零的函数
+  - 通过`arch`和`BSP`代码实现的内存子系统接口。
+    - 例如： 一个`MMU`接口定义的`MMU`功能原型
+ - `src/bsp/__board_name__/memory.rs` 和 `src/bsp/__board_name__/memory/**/*`
+   - `BSP` 具体代码.
+   - 例如: 主板内存映射 (DRAM物理地址 和 MMIO 设备).
+- `src/_arch/__arch_name__/memory.rs` 和 `src/_arch/__arch_name__/memory/**/*`
+  - 处理器架构的具体代码。
+  - 例如:为`__arch_name__` 处理器架构实现的`MMU`接口。
+  
+从一个命名空间角度来看，内存子系统代码在：
+  - `crate::memory::*`
+  - `crate::bsp::memory::*`

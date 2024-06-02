@@ -285,4 +285,4 @@ Breakpoint 1 at 0x8025c: file src/main.rs, line 158.
 感谢[@naotaco](https://github.com/naotaco)为本教程奠定了基础。
 
 ## 相比之前的变化（diff）
-请检查[英文版本](README.md#diff-to-previous)，这是最新的。
+请检查[英文版本](README.EN.md#diff-to-previous)，这是最新的。

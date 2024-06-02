@@ -135,4 +135,4 @@ Miniterm 1.0
 8. 通过按下<kbd>ctrl-c</kbd>退出。
 
 ## 相比之前的变化（diff）
-请检查[英文版本](README.md#diff-to-previous)，这是最新的。
+请检查[英文版本](README.EN.md#diff-to-previous)，这是最新的。

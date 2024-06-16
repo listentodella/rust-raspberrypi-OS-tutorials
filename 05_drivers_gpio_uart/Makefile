@@ -14,7 +14,7 @@ include ../common/operating_system.mk
 BSP ?= rpi3
 
 # Default to a serial device name that is common in Linux.
-DEV_SERIAL ?= /dev/ttyUSB0
+DEV_SERIAL ?= /dev/tty.usbserial-0001
 
 
 

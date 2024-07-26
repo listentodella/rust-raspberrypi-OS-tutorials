@@ -124,7 +124,9 @@ mod print;
 ///
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
+    // 通过console进行打印
     println!("Hello from Rust!");
 
+    // 也是通过console进行打印 panic信息
     panic!("Stopping here.")
 }

@@ -11,6 +11,7 @@ use core::fmt;
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
+/// 函数式调用, 获取console实例后, 调用write_fmt方法打印内容到console
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use console::interface::Write;

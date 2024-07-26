@@ -14,9 +14,8 @@ use crate::bsp;
 pub mod interface {
     /// Console write functions.
     ///
-    /// `core::fmt::Write` is exactly what we need for now. Re-export it here because
-    /// implementing `console::Write` gives a better hint to the reader about the
-    /// intention.
+    /// `core::fmt::Write` 确实是我们当前所需的.
+    /// 在这里重导出它, 因为实现 `console::Write` 给读者一个更明确的提示.
     pub use core::fmt::Write;
 }
 
@@ -24,9 +23,9 @@ pub mod interface {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Return a reference to the console.
+/// 返回一个对console的引用.
 ///
-/// This is the global console used by all printing macros.
+/// 这是所有打印宏所使用的全局console.
 pub fn console() -> impl interface::Write {
     bsp::console::console()
 }

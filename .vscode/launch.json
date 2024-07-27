@@ -1,0 +1,45 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LLDB QEMU Debug",
+            "type": "lldb",
+            "request": "custom",
+            "targetCreateCommands": [
+                "target create ${workspaceFolder}/04_safe_globals/target/aarch64-unknown-none-softfloat/debug/kernel",
+            ],
+            "processCreateCommands": [
+                "gdb-remote localhost:1234"
+            ],
+            "preLaunchTask": "Run QEMU"
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "GDB QEMU Debug",
+            "miDebuggerServerAddress": "localhost:1234",
+            "cwd": "${workspaceRoot}",
+            "program": "${workspaceFolder}/04_safe_globals/target/aarch64-unknown-none-softfloat/debug/kernel",
+            "stopAtConnect": true,
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            },
+            "osx": {
+                // suggest to use lldb for osx
+                "MIMode": "lldb",
+            },
+            "windows": {
+                "MIMode": "gdb",
+                //"miDebuggerPath": "C:\\MinGw\\bin\\gdb.exe"
+            },
+            // qemu gdb server is a background task
+            // so we need do some work to make current task to know qemu's state
+            //https://code.visualstudio.com/docs/editor/tasks#_can-a-background-task-be-used-as-a-prelaunchtask-in-launchjson
+            "preLaunchTask": "Run QEMU"
+        }
+    ]
+}

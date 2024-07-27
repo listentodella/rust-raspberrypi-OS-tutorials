@@ -10,7 +10,7 @@ use crate::bsp;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Console interfaces.
+/// Console 的接口
 pub mod interface {
     use core::fmt;
 
@@ -20,15 +20,18 @@ pub mod interface {
         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
     }
 
-    /// Console statistics.
+    /// Console的统计信息
     pub trait Statistics {
-        /// Return the number of characters written.
+        /// 先提供了一个默认实现, 后续再根据需要override
         fn chars_written(&self) -> usize {
             0
         }
     }
 
     /// Trait alias for a full-fledged console.
+    /// 相当于给Console定义了一个trait别名
+    /// 很巧妙的写法, 明明一开始只是零散地定义了几个trait
+    /// 后来将它们合并成了一个trait, 简洁明了, 又不需要重构代码
     pub trait All: Write + Statistics {}
 }
 

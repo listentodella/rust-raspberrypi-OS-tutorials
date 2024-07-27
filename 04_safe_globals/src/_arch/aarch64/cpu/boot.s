@@ -40,6 +40,7 @@ _start:
 	ADR_REL	x0, __bss_start
 	ADR_REL x1, __bss_end_exclusive
 
+// 初始化bss, 一旦完成后，将跳转到rust prepare的代码
 .L_bss_init_loop:
 	cmp	x0, x1
 	b.eq	.L_prepare_rust

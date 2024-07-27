@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run QEMU",
+            "type": "shell",
+            "command": "echo 'QEMU Server started'; qemu-system-aarch64 -M raspi3b -nographic -kernel 04_safe_globals/kernel8.img -s -S",
+            "isBackground": true,
+            "problemMatcher": [
+            {
+                "pattern": [
+                    {
+                        "regexp": ".",
+                        "file": 1,
+                        "location": 2,
+                        "message": 3
+                    }
+                ],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".",
+                    "endsPattern": "QEMU Server started",
+                }
+            }
+        ],
+    },
+    ]
+}

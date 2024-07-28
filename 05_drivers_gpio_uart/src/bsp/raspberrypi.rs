@@ -12,7 +12,7 @@ pub mod memory;
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Board identification.
+/// 用于返回board名称
 pub fn board_name() -> &'static str {
     #[cfg(feature = "bsp_rpi3")]
     {

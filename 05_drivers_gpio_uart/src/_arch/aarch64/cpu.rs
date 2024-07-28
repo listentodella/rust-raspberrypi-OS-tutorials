@@ -19,7 +19,8 @@ use aarch64_cpu::asm;
 
 pub use asm::nop;
 
-/// Spin for `n` cycles.
+/// Spin `n` 个cycles
+/// 其实就是执行`n`个nop指令
 #[cfg(feature = "bsp_rpi3")]
 #[inline(always)]
 pub fn spin_for_cycles(n: usize) {

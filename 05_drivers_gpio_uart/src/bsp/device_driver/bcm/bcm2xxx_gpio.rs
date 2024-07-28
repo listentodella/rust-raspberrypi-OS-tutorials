@@ -8,6 +8,7 @@ use crate::{
     bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
     synchronization::NullLock,
 };
+/// 用于访问GPIO寄存器的模块
 use tock_registers::{
     interfaces::{ReadWriteable, Writeable},
     register_bitfields, register_structs,
@@ -105,7 +106,7 @@ register_structs! {
     }
 }
 
-/// Abstraction for the associated MMIO registers.
+/// GPIO对应的MMIO寄存器的抽象
 type Registers = MMIODerefWrapper<RegisterBlock>;
 
 struct GPIOInner {
@@ -126,11 +127,11 @@ pub struct GPIO {
 //--------------------------------------------------------------------------------------------------
 
 impl GPIOInner {
-    /// Create an instance.
+    /// 创建GPIO实例
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide a correct MMIO start address.
+    /// - 用户必须保证提供正确的MMIO起始地址.
     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
             registers: Registers::new(mmio_start_addr),
@@ -142,14 +143,12 @@ impl GPIOInner {
     fn disable_pud_14_15_bcm2837(&mut self) {
         use crate::cpu;
 
-        // Make an educated guess for a good delay value (Sequence described in the BCM2837
-        // peripherals PDF).
+        // 根据bcm2837的外设手册, 推测出的一个合理的延迟值的猜测
         //
-        // - According to Wikipedia, the fastest RPi4 clocks around 1.5 GHz.
-        // - The Linux 2837 GPIO driver waits 1 µs between the steps.
+        // - 根据wiki, rpi4的最快时钟大约1.5GHz
+        // - Linux 2837 的gpio驱动操作则是等待了 1us
         //
-        // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
-        // would the CPU be clocked at 2 GHz.
+        // 因此, 这里尝试用2000cycles作为安全操作的延迟值, 如果CPU时钟频率为2GHz, 则等价于为1us.
         const DELAY: usize = 2000;
 
         self.registers.GPPUD.write(GPPUD::PUD::Off);
@@ -173,17 +172,17 @@ impl GPIOInner {
         );
     }
 
-    /// Map PL011 UART as standard output.
+    /// 映射PL011 UART作为标准输出
     ///
     /// TX to pin 14
     /// RX to pin 15
     pub fn map_pl011_uart(&mut self) {
-        // Select the UART on pins 14 and 15.
+        // 选择 pin14&15 作为UART功能
         self.registers
             .GPFSEL1
             .modify(GPFSEL1::FSEL15::AltFunc0 + GPFSEL1::FSEL14::AltFunc0);
 
-        // Disable pull-up/down on pins 14 and 15.
+        // 关闭pin14&15的上拉下拉电阻, 使得UART可以正常工作
         #[cfg(feature = "bsp_rpi3")]
         self.disable_pud_14_15_bcm2837();
 
@@ -197,20 +196,21 @@ impl GPIOInner {
 //--------------------------------------------------------------------------------------------------
 
 impl GPIO {
+    // 定义GPIO的兼容性字符串
     pub const COMPATIBLE: &'static str = "BCM GPIO";
 
-    /// Create an instance.
+    /// 创建GPIO实例
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide a correct MMIO start address.
+    /// - 用户必须保证提供正确的MMIO起始地址.
     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
             inner: NullLock::new(GPIOInner::new(mmio_start_addr)),
         }
     }
 
-    /// Concurrency safe version of `GPIOInner.map_pl011_uart()`
+    /// 通过lock机制保证并发安全, 可以安全设置pl011对应的gpio口为uart功能
     pub fn map_pl011_uart(&self) {
         self.inner.lock(|inner| inner.map_pl011_uart())
     }

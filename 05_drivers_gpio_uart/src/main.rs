@@ -129,16 +129,22 @@ mod synchronization;
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order.
 unsafe fn kernel_init() -> ! {
-    // Initialize the BSP driver subsystem.
+    // 初始化BSP驱动子系统
+    // 实质当前只是将gpio & uart 驱动注册进 driver_manager 里的数组里
     if let Err(x) = bsp::driver::init() {
         panic!("Error initializing BSP driver subsystem: {}", x);
     }
 
-    // Initialize all device drivers.
+    // 到这里才进行驱动的初始化, 调用它们的init()方法
+    // init()方法里仅会初始化外设自身的寄存器
+    // 而init()成功后,会调用它们各自的callback()
+    // 不同的驱动,callback()的工作不同
+    // 目前uart的callback()会将自己注册到console上,以供外部使用
+    // 目前gpio的callback()则是会初始化pl011对应的gpio
     driver::driver_manager().init_drivers();
-    // println! is usable from here on.
+    // println! 在此之后就可以使用了
 
-    // Transition from unsafe to safe.
+    // 从unsafe到safe的过渡
     kernel_main()
 }
 
@@ -159,10 +165,14 @@ fn kernel_main() -> ! {
     println!("[3] Chars written: {}", console().chars_written());
     println!("[4] Echoing input now");
 
-    // Discard any spurious received characters before going into echo mode.
+    // 通过console().clear_rx()清空rx
+    // console()实际上会访问pl011
     console().clear_rx();
+    // 循环通过console读取输入并输出
     loop {
+        // console()实际上是调用pl011的read_char()方法, 是阻塞模式
         let c = console().read_char();
+        // 如果这里通过write_char()写的话, 则即便输入, 也不会回显
         console().write_char(c);
     }
 }

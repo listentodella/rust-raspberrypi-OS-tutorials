@@ -68,14 +68,12 @@ static CUR_CONSOLE: NullLock<&'static (dyn interface::All + Sync)> =
 //--------------------------------------------------------------------------------------------------
 use synchronization::interface::Mutex;
 
-/// Register a new console.
+/// 注册一个新的console
 pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
     CUR_CONSOLE.lock(|con| *con = new_console);
 }
 
-/// Return a reference to the currently registered console.
-///
-/// This is the global console used by all printing macros.
+/// 返回当前注册的console的引用
 pub fn console() -> &'static dyn interface::All {
     CUR_CONSOLE.lock(|con| *con)
 }

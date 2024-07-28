@@ -9,7 +9,7 @@
             "type": "lldb",
             "request": "custom",
             "targetCreateCommands": [
-                "target create ${workspaceFolder}/04_safe_globals/target/aarch64-unknown-none-softfloat/debug/kernel",
+                "target create ${relativeFileDirname}/../target/aarch64-unknown-none-softfloat/debug/kernel",
             ],
             "processCreateCommands": [
                 "gdb-remote localhost:1234"
@@ -22,7 +22,7 @@
             "name": "GDB QEMU Debug",
             "miDebuggerServerAddress": "localhost:1234",
             "cwd": "${workspaceRoot}",
-            "program": "${workspaceFolder}/04_safe_globals/target/aarch64-unknown-none-softfloat/debug/kernel",
+            "program": "${relativeFileDirname}/../target/aarch64-unknown-none-softfloat/debug/kernel",
             "stopAtConnect": true,
             "linux": {
                 "MIMode": "gdb",

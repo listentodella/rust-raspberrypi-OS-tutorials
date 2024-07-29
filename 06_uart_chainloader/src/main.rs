@@ -153,6 +153,8 @@ const MINILOAD_LOGO: &str = r#"
 fn kernel_main() -> ! {
     use console::console;
 
+    // 相对上一节而言没有太多变化
+    // 此处只是打印的log不同而已
     println!("{}", MINILOAD_LOGO);
     println!("{:^37}", bsp::board_name());
     println!();
@@ -167,7 +169,10 @@ fn kernel_main() -> ! {
         console().write_char(3 as char);
     }
 
+    // TIPS: 很明显, uart不仅仅是可以读取我们通过键盘输入的字符
+    // 外部程序也通过uart端口发送数据
     // Read the binary's size.
+    // 这里是阻塞读, 连续读4次, 可以拼接成 binary size
     let mut size: u32 = u32::from(console().read_char() as u8);
     size |= u32::from(console().read_char() as u8) << 8;
     size |= u32::from(console().read_char() as u8) << 16;
@@ -177,9 +182,12 @@ fn kernel_main() -> ! {
     console().write_char('O');
     console().write_char('K');
 
+    // 获取board的加载地址, 对于rpi3, 此值 0x80000
     let kernel_addr: *mut u8 = bsp::memory::board_default_load_addr() as *mut u8;
     unsafe {
-        // Read the kernel byte by byte.
+        // 通过串口逐字节地读取, 并写入到 kernel_addr
+        // 注意是通过 volatile 指针来操作内存, 避免编译器优化
+        // 同时, 读取size个字节, 不会多读
         for i in 0..size {
             core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
         }
@@ -189,6 +197,8 @@ fn kernel_main() -> ! {
     console().flush();
 
     // Use black magic to create a function pointer.
+    // 这里是通过 transmute 将 kernel_addr 转换成一个函数指针, 然后调用它
+    // 因为该地址存放的就是可执行的程序
     let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
 
     // Jump to loaded kernel!

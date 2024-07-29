@@ -11,6 +11,7 @@
 /// The board's physical memory map.
 #[rustfmt::skip]
 pub(super) mod map {
+    // rpi3默认的加载地址
     pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 
     pub const GPIO_OFFSET:         usize = 0x0020_0000;

@@ -58,11 +58,16 @@ _start:
 	b	.L_bss_init_loop
 
 	// Next, relocate the binary.
+	// 定义在kernel.ld中
 .L_relocate_binary:
 	ADR_REL	x0, __binary_nonzero_start         // The address the binary got loaded to.
 	ADR_ABS	x1, __binary_nonzero_start         // The address the binary was linked to.
 	ADR_ABS	x2, __binary_nonzero_end_exclusive
 
+	// WARN:以下解读可能有误，待验证
+	// 从 __binary_nonzero_start 开始的
+	// 将 __binary_nonzero_end_exclusive 之间的的数据进行复制
+	// 复制到 __binary_nonzero_start 开始的绝对地址
 .L_copy_loop:
 	ldr	x3, [x0], #8
 	str	x3, [x1], #8

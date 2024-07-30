@@ -52,8 +52,9 @@ _start:
 	ADR_REL	x0, __boot_core_stack_end_exclusive
 	mov	sp, x0
 
-	// Read the CPU's timer counter frequency and store it in ARCH_TIMER_COUNTER_FREQUENCY.
-	// Abort if the frequency read back as 0.
+	// 读取cpu timer 计数的频率,并将它存储在ARCH_TIMER_COUNTER_FREQUENCY中.
+	// 该变量在aarch64/time.rs中定义.
+	// 如果读到的是0,则中止程序.
 	ADR_REL	x1, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
 	mrs	x2, CNTFRQ_EL0
 	cmp	x2, xzr

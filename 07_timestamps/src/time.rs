@@ -14,7 +14,7 @@ use core::time::Duration;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Provides time management functions.
+/// 提供基于架构的定时器的一些方法
 pub struct TimeManager;
 
 //--------------------------------------------------------------------------------------------------
@@ -33,12 +33,13 @@ pub fn time_manager() -> &'static TimeManager {
 }
 
 impl TimeManager {
-    /// Create an instance.
+    /// 创建一个TimeManager实例
+    /// 其实是一个空结构体
     pub const fn new() -> Self {
         Self
     }
 
-    /// The timer's resolution.
+    /// 获取基于架构的计时器的精度
     pub fn resolution(&self) -> Duration {
         arch_time::resolution()
     }

@@ -163,9 +163,12 @@ fn kernel_main() -> ! {
     );
 
     info!("Drivers loaded:");
+    // 枚举driver manager中的所有驱动
+    // 注意timer并没有注册其中, 通过TimeManger 是直接访问寄存器的
     driver::driver_manager().enumerate();
 
-    // Test a failing timer case.
+    // 从上面的log可以得知, rpi3的定时器精度是16ns...
+    // 所以这里尝试spin 1ns并不会生效
     time::time_manager().spin_for(Duration::from_nanos(1));
 
     loop {

@@ -19,7 +19,7 @@ use tock_registers::interfaces::Readable;
 //--------------------------------------------------------------------------------------------------
 use crate::exception::PrivilegeLevel;
 
-/// The processing element's current privilege level.
+/// 用于获取PE当前的特权等级
 pub fn current_privilege_level() -> (PrivilegeLevel, &'static str) {
     let el = CurrentEL.read_as_enum(CurrentEL::EL);
     match el {

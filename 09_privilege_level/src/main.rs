@@ -133,6 +133,7 @@ mod time;
 ///
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order.
+/// - 在本例中, 执行到此处时, 已经处于EL1了
 unsafe fn kernel_init() -> ! {
     // Initialize the BSP driver subsystem.
     if let Err(x) = bsp::driver::init() {
@@ -159,6 +160,7 @@ fn kernel_main() -> ! {
     );
     info!("Booting on: {}", bsp::board_name());
 
+    // 获取PE当前的特权等级
     let (_, privilege_level) = exception::current_privilege_level();
     info!("Current privilege level: {}", privilege_level);
 

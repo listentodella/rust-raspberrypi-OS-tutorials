@@ -66,7 +66,7 @@ where
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Print the AArch64 exceptions status.
+/// 打印 aarch64 的异常状态
 #[rustfmt::skip]
 pub fn print_state() {
     use crate::info;

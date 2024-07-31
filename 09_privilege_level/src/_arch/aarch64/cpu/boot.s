@@ -27,12 +27,12 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
-	// Only proceed if the core executes in EL2. Park it otherwise.
+	// 除非core在EL2中执行，否则停下来
 	mrs	x0, CurrentEL
 	cmp	x0, {CONST_CURRENTEL_EL2}
 	b.ne	.L_parking_loop
 
-	// Only proceed on the boot core. Park it otherwise.
+	// 即便该core是el2, 如果不是core0, 也停下来
 	mrs	x1, MPIDR_EL1
 	and	x1, x1, {CONST_CORE_ID_MASK}
 	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs

@@ -40,7 +40,7 @@ pub enum MMUEnableError {
     Other(&'static str),
 }
 
-/// Memory Management interfaces.
+/// 内存管理接口
 pub mod interface {
     use super::*;
 
@@ -48,13 +48,12 @@ pub mod interface {
     pub trait MMU {
         /// Called by the kernel during early init. Supposed to take the translation tables from the
         /// `BSP`-supplied `virt_mem_layout()` and install/activate them for the respective MMU.
-        ///
+        /// 由kernel初始化早期时调用. 应该由`BSP`提供 `virt_mem_layout()` 页表信息, 并加载、激活对应的MMU
         /// # Safety
-        ///
-        /// - Changes the HW's global state.
+        /// - 这将改变硬件的全局状态
         unsafe fn enable_mmu_and_caching(&self) -> Result<(), MMUEnableError>;
 
-        /// Returns true if the MMU is enabled, false otherwise.
+        /// 返回MMU的使能状态
         fn is_enabled(&self) -> bool;
     }
 }

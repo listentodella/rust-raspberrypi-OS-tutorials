@@ -135,7 +135,10 @@ mod time;
 /// Early init code.
 ///
 /// # Safety
-///
+/// - 此时只有单核可以激活
+/// - 初始化阶段调用此函数，必须以正确的顺序:
+///   - MMU + Data 的cache必须最先使能.
+///     否则, 任何的原子操作, 例如spinlock(尽管目前没有真正使用), 在rpi无法正确工作
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order:
 ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,

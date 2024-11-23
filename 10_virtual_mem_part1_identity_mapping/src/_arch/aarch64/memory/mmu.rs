@@ -25,7 +25,7 @@ use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Memory Management Unit type.
+/// MMU类型. 同样,这里也只是定义有这么个"类型", 本身没有成员
 struct MemoryManagementUnit;
 
 //--------------------------------------------------------------------------------------------------
@@ -49,8 +49,7 @@ pub mod mair {
 /// The kernel translation tables.
 ///
 /// # Safety
-///
-/// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
+/// - 应该在`.bss`段. 因此, 要确保每个成员初始值都为0
 static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
@@ -108,7 +107,7 @@ impl MemoryManagementUnit {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Return a reference to the MMU instance.
+/// 返回一个MMU实例的静态引用
 pub fn mmu() -> &'static impl memory::mmu::interface::MMU {
     &MMU
 }
@@ -158,6 +157,7 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         Ok(())
     }
 
+    /// 通过获取寄存器的状态判断, 而不是靠内存里的某个flag
     #[inline(always)]
     fn is_enabled(&self) -> bool {
         SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)

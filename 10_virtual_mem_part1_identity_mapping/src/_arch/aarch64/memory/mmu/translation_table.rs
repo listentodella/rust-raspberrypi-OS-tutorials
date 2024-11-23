@@ -112,8 +112,8 @@ struct TableDescriptor {
 }
 
 /// A page descriptor with 64 KiB aperture.
-///
-/// The output points to physical memory.
+/// 64KB 页描述符
+/// 其输出指向物理地址
 #[derive(Copy, Clone)]
 #[repr(C)]
 struct PageDescriptor {
@@ -133,6 +133,7 @@ const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpace::SIZE >> Granul
 
 /// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
 /// aligned, so the lvl3 is put first.
+/// 用于翻译页表的结构体. 64K对齐, 这样L3先存放
 #[repr(C)]
 #[repr(align(65536))]
 pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
